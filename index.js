@@ -29,13 +29,13 @@ function getTypeOf(value) {
 		.toLowerCase();
 }
 
-function hookRequire(handlebars, extensions) {
+function hookRequire(handlebars, extensions, rfs) {
 	extensions = extensions || [];
 
 	let originalHooks;
 
 	function compileFile(module, filename) {
-		const templateString = fs.readFileSync(filename, 'utf8');
+		const templateString = rfs.readFileSync(filename, 'utf8');
 
 		module.exports = handlebars.compile(templateString);
 	}
@@ -114,7 +114,7 @@ function reducer(options, obj, fileObj) {
 	return obj;
 }
 
-function resolveValue(options, value) {
+function resolveValue(options, value, rfs) {
 	if (!value) {
 		return {};
 	}
@@ -133,7 +133,7 @@ function resolveValue(options, value) {
 		return reducer(options, {}, {exports: value});
 	}
 
-	return requireGlob.sync(value, options);
+	return rfs.requireGlobSync(value, options);
 }
 
 // Wax
@@ -152,6 +152,7 @@ function HandlebarsWax(handlebars, options) {
 		parseDataName: null
 	};
 
+  this.fs = options.fs || fs;
 	this.handlebars = handlebars;
 	this.config = assign(defaults, options);
 	this.context = Object.create(null);
@@ -164,9 +165,9 @@ HandlebarsWax.prototype.partials = function (partials, options) {
 	options.keygen = options.parsePartialName;
 	options.reducer = options.reducer || reducer;
 
-	const unhookRequire = hookRequire(options.handlebars, options.extensions);
+	const unhookRequire = hookRequire(options.handlebars, options.extensions, this.fs);
 
-	options.handlebars.registerPartial(resolveValue(options, partials));
+	options.handlebars.registerPartial(resolveValue(options, partials, this.fs));
 
 	unhookRequire();
 
